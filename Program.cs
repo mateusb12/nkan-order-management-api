@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using OrderManagement.Features.Orders.Services;
 using Microsoft.EntityFrameworkCore;
 using OrderManagement.Shared.Data;
 using Microsoft.Data.SqlClient;
@@ -5,7 +7,13 @@ using Microsoft.Data.SqlClient;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
+builder.Services.AddScoped<OrderService>();
 
 builder.Services.AddDbContext<Database>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -45,6 +53,6 @@ app.MapGet("/health", async (IConfiguration config) =>
         SqlServerVersion = result?.ToString()
     });
 })
-.WithOpenApi();
+;
 
 app.Run();
