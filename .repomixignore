@@ -1,0 +1,40 @@
+# Build# Add patterns to ignore here, one per line
+# Example:
+# *.log
+# tmp/
+
+bin/
+obj/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+
+# Git
+.git/
+
+# Logs
+*.log
+
+# Environment / secrets
+.env
+.env.*
+appsettings.Development.json
+secrets.json
+
+# Docker
+docker-data/
+volumes/
+
+# Packages
+node_modules/
+
+# Generated files
+repomix-output.*
+*.packed.*
+*.generated.*
+
+# OS
+.DS_Store
+Thumbs.db
