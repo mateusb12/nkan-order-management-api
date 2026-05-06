@@ -1,0 +1,15 @@
+bin/
+obj/
+.idea/
+.vs/
+
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+appsettings.Local.json
+
+node_modules/
+
+.DS_Store
