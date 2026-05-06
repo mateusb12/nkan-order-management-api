@@ -53,7 +53,9 @@ A organização foi feita por feature para manter arquivos relacionados próximo
 docker compose up --build
 ```
 
-A API ficará disponível em:
+Na inicialização, a API aguarda o SQL Server ficar disponível e aplica automaticamente as migrations pendentes.
+
+A API fica disponível em:
 
 ```text
 http://localhost:8080

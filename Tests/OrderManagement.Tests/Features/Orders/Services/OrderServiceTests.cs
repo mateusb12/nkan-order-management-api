@@ -194,6 +194,25 @@ public class OrderServiceTests
         Assert.Equal("First", secondPage[0].CustomerName);
     }
 
+    [Theory]
+    [InlineData(0, 10, "Page must be greater than zero.")]
+    [InlineData(-1, 10, "Page must be greater than zero.")]
+    [InlineData(1, 0, "Page size must be greater than zero.")]
+    [InlineData(1, -10, "Page size must be greater than zero.")]
+    public async Task ListarPedidosAsync_DeveLancarErro_QuandoPaginacaoForInvalida(
+        int page,
+        int pageSize,
+        string expectedMessage)
+    {
+        await using var db = CreateDatabase();
+        var service = new OrderService(db);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.GetOrdersAsync(page, pageSize));
+
+        Assert.Equal(expectedMessage, exception.Message);
+    }
+
     [Fact]
     public async Task BuscarPedidoPorIdAsync_DeveRetornarPedidoComItens()
     {

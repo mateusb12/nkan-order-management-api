@@ -81,6 +81,16 @@ public class OrderService(Database db)
         int page,
         int pageSize)
     {
+        if (page <= 0)
+        {
+            throw new InvalidOperationException("Page must be greater than zero.");
+        }
+
+        if (pageSize <= 0)
+        {
+            throw new InvalidOperationException("Page size must be greater than zero.");
+        }
+
         return await db.Orders
             .OrderByDescending(o => o.CreatedAt)
             .Skip((page - 1) * pageSize)

@@ -26,6 +26,8 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+await ApplyDatabaseMigrationsAsync(app);
+
 // Configure the HTTP request pipeline.
 app.MapOpenApi();
 
@@ -59,3 +61,34 @@ app.MapGet("/health", async (IConfiguration config) =>
 ;
 
 app.Run();
+
+static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
+{
+    using var scope = app.Services.CreateScope();
+
+    var db = scope.ServiceProvider.GetRequiredService<Database>();
+    var logger = scope.ServiceProvider
+        .GetRequiredService<ILoggerFactory>()
+        .CreateLogger("DatabaseMigration");
+
+    const int maxRetries = 10;
+
+    for (var attempt = 1; attempt <= maxRetries; attempt++)
+    {
+        try
+        {
+            await db.Database.MigrateAsync();
+            return;
+        }
+        catch (SqlException ex) when (attempt < maxRetries)
+        {
+            logger.LogWarning(
+                ex,
+                "SQL Server is not ready yet. Retrying migration attempt {Attempt}/{MaxRetries}...",
+                attempt,
+                maxRetries);
+
+            await Task.Delay(TimeSpan.FromSeconds(5));
+        }
+    }
+}
