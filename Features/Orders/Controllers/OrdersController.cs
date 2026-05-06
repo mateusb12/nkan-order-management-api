@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using OrderManagement.Features.Orders.DTOs;
 using OrderManagement.Features.Orders.Services;
-using OrderManagement.Shared.Exceptions;
 
 namespace OrderManagement.Features.Orders.Controllers;
 
@@ -22,19 +21,9 @@ public class OrdersController(OrderService orders) : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetOrderById(int id)
     {
-        try
-        {
-            var order = await orders.GetOrderByIdAsync(id);
+        var order = await orders.GetOrderByIdAsync(id);
 
-            return Ok(order);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new
-            {
-                error = ex.Message
-            });
-        }
+        return Ok(order);
     }
 
     [HttpPost]
@@ -51,25 +40,8 @@ public class OrdersController(OrderService orders) : ControllerBase
     [HttpPut("{id:int}/cancel")]
     public async Task<IActionResult> CancelOrder(int id)
     {
-        try
-        {
-            var order = await orders.CancelOrderAsync(id);
+        var order = await orders.CancelOrderAsync(id);
 
-            return Ok(order);
-        }
-        catch (NotFoundException ex)
-        {
-            return NotFound(new
-            {
-                error = ex.Message
-            });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new
-            {
-                error = ex.Message
-            });
-        }
+        return Ok(order);
     }
 }

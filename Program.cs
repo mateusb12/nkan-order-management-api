@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using OrderManagement.Features.Orders.Services;
 using Microsoft.EntityFrameworkCore;
 using OrderManagement.Shared.Data;
+using OrderManagement.Shared.Middleware;
 using Microsoft.Data.SqlClient;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -32,6 +33,8 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseAuthorization();
+
+app.UseMiddleware<ExceptionMiddleware>();
 
 app.MapControllers();
 
