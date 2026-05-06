@@ -13,3 +13,4 @@ appsettings.Local.json
 node_modules/
 
 .DS_Store
+/OrderManagement.slnx

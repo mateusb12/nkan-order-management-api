@@ -1,23 +1,16 @@
-﻿FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
-USER $APP_UID
-WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
-
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
-ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["OrderManagement/OrderManagement.csproj", "OrderManagement/"]
-RUN dotnet restore "OrderManagement/OrderManagement.csproj"
+
 COPY . .
-WORKDIR "/src/OrderManagement"
-RUN dotnet build "./OrderManagement.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./OrderManagement.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet restore
+RUN dotnet publish -c Release -o /app/publish
 
-FROM base AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
-COPY --from=publish /app/publish .
+
+COPY --from=build /app/publish .
+
+EXPOSE 8080
+
 ENTRYPOINT ["dotnet", "OrderManagement.dll"]
