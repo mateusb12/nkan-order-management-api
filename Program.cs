@@ -1,6 +1,8 @@
 using System.Text.Json.Serialization;
-using OrderManagement.Features.Orders.Services;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using OrderManagement.Features.Messaging;
+using OrderManagement.Features.Orders.Services;
 using OrderManagement.Shared.Data;
 using OrderManagement.Shared.Middleware;
 using OrderManagement.Shared.OpenApi;
@@ -8,14 +10,19 @@ using Microsoft.Data.SqlClient;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services
     .AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
+
 builder.Services.AddScoped<OrderService>();
+
+builder.Services.Configure<RabbitMqOptions>(
+    builder.Configuration.GetSection("RabbitMq"));
+
+builder.Services.AddScoped<IRabbitMqService, RabbitMqService>();
 
 builder.Services.AddDbContext<Database>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -32,7 +39,6 @@ var app = builder.Build();
 
 await ApplyDatabaseMigrationsAsync(app);
 
-// Configure the HTTP request pipeline.
 app.MapOpenApi();
 
 app.UseSwagger();
@@ -61,8 +67,7 @@ app.MapGet("/health", async (IConfiguration config) =>
         Connected = true,
         SqlServerVersion = result?.ToString()
     });
-})
-;
+});
 
 app.Run();
 

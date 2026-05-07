@@ -1,15 +1,21 @@
 using Dapper;
 using Microsoft.EntityFrameworkCore;
+using OrderManagement.Features.Messaging;
 using OrderManagement.Features.Orders.DTOs;
 using OrderManagement.Features.Orders.DTOs.Responses;
+using OrderManagement.Features.Orders.Events;
 using OrderManagement.Shared.Data;
 using OrderManagement.Shared.Exceptions;
 using OrderManagement.Shared.Models;
 
 namespace OrderManagement.Features.Orders.Services;
 
-public class OrderService(Database db)
+public class OrderService(
+    Database db,
+    IRabbitMqService? rabbitMqService = null)
 {
+    private const string OrderCreatedQueueName = "orders.created";
+
     public async Task<OrderDetailsResponse> CreateOrderAsync(CreateOrderRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.CustomerName))
@@ -66,21 +72,14 @@ public class OrderService(Database db)
 
         await db.SaveChangesAsync();
 
-        return new OrderDetailsResponse
+        if (rabbitMqService is not null)
         {
-            Id = order.Id,
-            CustomerName = order.CustomerName,
-            CreatedAt = order.CreatedAt,
-            Status = order.Status,
-            TotalAmount = order.TotalAmount,
-            Items = order.Items.Select(item => new OrderItemResponse
-            {
-                ProductId = item.ProductId,
-                ProductName = item.ProductName,
-                Quantity = item.Quantity,
-                UnitPrice = item.UnitPrice
-            }).ToList()
-        };
+            await rabbitMqService.PublishAsync(
+                OrderCreatedQueueName,
+                OrderCreatedEvent.From(order));
+        }
+
+        return MapToDetailsResponse(order);
     }
 
     public async Task<List<OrderSummaryResponse>> GetOrdersAsync(
@@ -151,21 +150,7 @@ public class OrderService(Database db)
             throw new NotFoundException($"Order {id} not found.");
         }
 
-        return new OrderDetailsResponse
-        {
-            Id = order.Id,
-            CustomerName = order.CustomerName,
-            CreatedAt = order.CreatedAt,
-            Status = order.Status,
-            TotalAmount = order.TotalAmount,
-            Items = order.Items.Select(item => new OrderItemResponse
-            {
-                ProductId = item.ProductId,
-                ProductName = item.ProductName,
-                Quantity = item.Quantity,
-                UnitPrice = item.UnitPrice
-            }).ToList()
-        };
+        return MapToDetailsResponse(order);
     }
 
     public async Task<OrderDetailsResponse> CancelOrderAsync(int id)
@@ -189,6 +174,11 @@ public class OrderService(Database db)
 
         await db.SaveChangesAsync();
 
+        return MapToDetailsResponse(order);
+    }
+
+    private static OrderDetailsResponse MapToDetailsResponse(Order order)
+    {
         return new OrderDetailsResponse
         {
             Id = order.Id,

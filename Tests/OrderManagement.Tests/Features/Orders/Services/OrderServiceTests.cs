@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using OrderManagement.Features.Orders.Events;
+using OrderManagement.Features.Messaging;
 using OrderManagement.Features.Orders.DTOs;
 using OrderManagement.Features.Orders.Services;
 using OrderManagement.Shared.Data;
@@ -298,4 +300,129 @@ public class OrderServiceTests
 
         Assert.Equal("Order 999 not found.", exception.Message);
     }
+    [Fact]
+    public async Task CriarPedidoAsync_DevePublicarEventoOrderCreated()
+    {
+        await using var db = CreateDatabase();
+        var rabbitMq = new FakeRabbitMqService();
+        var service = new OrderService(db, rabbitMq);
+        var request = CreateValidRequest();
+
+        var result = await service.CreateOrderAsync(request);
+
+        var publishedMessage = Assert.Single(rabbitMq.PublishedMessages);
+
+        Assert.Equal("orders.created", publishedMessage.QueueName);
+
+        var orderCreatedEvent = Assert.IsType<OrderCreatedEvent>(
+            publishedMessage.Message);
+
+        Assert.Equal(result.Id, orderCreatedEvent.OrderId);
+        Assert.Equal(result.CustomerName, orderCreatedEvent.CustomerName);
+        Assert.Equal(result.CreatedAt, orderCreatedEvent.CreatedAt);
+        Assert.Equal("Created", orderCreatedEvent.Status);
+        Assert.Equal(result.TotalAmount, orderCreatedEvent.TotalAmount);
+        Assert.Equal(2, orderCreatedEvent.Items.Count);
+
+        Assert.Contains(orderCreatedEvent.Items, item =>
+            item.ProductId == 1 &&
+            item.ProductName == "Notebook" &&
+            item.Quantity == 1 &&
+            item.UnitPrice == 3500m);
+
+        Assert.Contains(orderCreatedEvent.Items, item =>
+            item.ProductId == 2 &&
+            item.ProductName == "Mouse" &&
+            item.Quantity == 2 &&
+            item.UnitPrice == 80m);
+    }
+
+    [Fact]
+    public async Task CriarPedidoAsync_NaoDevePublicarEvento_QuandoPedidoForInvalido()
+    {
+        await using var db = CreateDatabase();
+        var rabbitMq = new FakeRabbitMqService();
+        var service = new OrderService(db, rabbitMq);
+
+        var request = CreateValidRequest();
+        request.Items[0].Quantity = 0;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CreateOrderAsync(request));
+
+        Assert.Empty(rabbitMq.PublishedMessages);
+    }
+
+    [Fact]
+    public void OrderCreatedEventFrom_DeveMapearPedidoParaEvento()
+    {
+        var order = new Order
+        {
+            Id = 10,
+            CustomerName = "Maria Silva",
+            CreatedAt = new DateTime(2026, 3, 12, 10, 0, 0, DateTimeKind.Utc),
+            Status = OrderStatus.Created,
+            TotalAmount = 3660m,
+            Items =
+            [
+                new OrderItem
+                {
+                    ProductId = 1,
+                    ProductName = "Notebook",
+                    Quantity = 1,
+                    UnitPrice = 3500m
+                },
+                new OrderItem
+                {
+                    ProductId = 2,
+                    ProductName = "Mouse",
+                    Quantity = 2,
+                    UnitPrice = 80m
+                }
+            ]
+        };
+
+        var result = OrderCreatedEvent.From(order);
+
+        Assert.Equal(10, result.OrderId);
+        Assert.Equal("Maria Silva", result.CustomerName);
+        Assert.Equal(order.CreatedAt, result.CreatedAt);
+        Assert.Equal("Created", result.Status);
+        Assert.Equal(3660m, result.TotalAmount);
+        Assert.Equal(2, result.Items.Count);
+
+        Assert.Contains(result.Items, item =>
+            item.ProductId == 1 &&
+            item.ProductName == "Notebook" &&
+            item.Quantity == 1 &&
+            item.UnitPrice == 3500m);
+
+        Assert.Contains(result.Items, item =>
+            item.ProductId == 2 &&
+            item.ProductName == "Mouse" &&
+            item.Quantity == 2 &&
+            item.UnitPrice == 80m);
+    }
+
+    private sealed class FakeRabbitMqService : IRabbitMqService
+    {
+        public List<PublishedMessage> PublishedMessages { get; } = [];
+
+        public Task PublishAsync<TMessage>(
+            string queueName,
+            TMessage message,
+            CancellationToken cancellationToken = default)
+        {
+            PublishedMessages.Add(new PublishedMessage(
+                QueueName: queueName,
+                Message: message!));
+
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed record PublishedMessage(
+        string QueueName,
+        object Message);
+
 }

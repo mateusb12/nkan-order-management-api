@@ -267,7 +267,27 @@ Com isso, a solução mantém o Entity Framework onde ele faz mais sentido e usa
 
 ### RabbitMQ
 
-#TODO
+Usei RabbitMQ como diferencial para publicar um evento quando um pedido é criado.
+
+Ao chamar o endpoint `POST /orders`, a API 
+- valida o payload
+- calcula o valor total
+- salva o pedido no SQL Server
+- publica uma mensagem `OrderCreatedEvent` na fila `orders.created` lá no RabbitMQ
+
+Essa publicação acontece depois do `SaveChangesAsync`, porque nesse momento o pedido já foi persistido e já possui um ID válido.
+
+A lógica de comunicação com o RabbitMQ ficou isolada em `Features/Messaging/RabbitMqService`. Assim, o `OrderService` continua focado nas regras de negócio de pedidos e apenas chama o serviço de mensageria quando precisa publicar o evento. Dessa forma a lógica fica modular para que outras features futuras possam reaproveitar a lógica de messageria.
+
+**Para manter o projeto simples e compatível com o escopo do teste técnico, decidi NÃO implementar lógicas complexas como**
+- consumer
+- dead-letter queue
+- retry policy
+- Outbox Pattern
+
+Em uma aplicação de produção, o Outbox Pattern seria uma opção melhor para garantir consistência entre o banco de dados e a publicação do evento. Do jeito que a aplicação está hoje não existe proteção absoluta contra possíveis inconsistências, para fins de simplicidade do desafio técnico.
+
+Caso a publicação no RabbitMQ falhe, o erro é registrado em log, mas a criação do pedido não é desfeita.
 
 ---
 
