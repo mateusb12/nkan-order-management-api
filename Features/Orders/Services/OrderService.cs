@@ -23,6 +23,11 @@ public class OrderService(Database db)
 
         var orderItems = request.Items.Select(item =>
         {
+            if (string.IsNullOrWhiteSpace(item.ProductName))
+            {
+                throw new InvalidOperationException("Product name is required.");
+            }
+
             if (item.Quantity <= 0)
             {
                 throw new InvalidOperationException(

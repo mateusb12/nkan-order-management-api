@@ -174,6 +174,21 @@ public class OrderServiceTests
     }
 
     [Fact]
+    public async Task CriarPedidoAsync_DeveLancarErro_QuandoNomeDoProdutoEstiverVazio()
+    {
+        await using var db = CreateDatabase();
+        var service = new OrderService(db);
+
+        var request = CreateValidRequest();
+        request.Items[0].ProductName = "";
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CreateOrderAsync(request));
+
+        Assert.Equal("Product name is required.", exception.Message);
+    }
+
+    [Fact]
     public async Task ListarPedidosAsync_DeveRetornarResumosPaginados()
     {
         await using var db = CreateDatabase();
