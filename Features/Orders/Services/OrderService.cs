@@ -1,3 +1,4 @@
+using Dapper;
 using Microsoft.EntityFrameworkCore;
 using OrderManagement.Features.Orders.DTOs;
 using OrderManagement.Features.Orders.DTOs.Responses;
@@ -96,19 +97,47 @@ public class OrderService(Database db)
             throw new InvalidOperationException("Page size must be greater than zero.");
         }
 
-        return await db.Orders
-            .OrderByDescending(o => o.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(o => new OrderSummaryResponse
-            {
-                Id = o.Id,
-                CustomerName = o.CustomerName,
-                CreatedAt = o.CreatedAt,
-                Status = o.Status,
-                TotalAmount = o.TotalAmount
-            })
-            .ToListAsync();
+        if (!db.Database.IsRelational())
+        {
+            return await db.Orders
+                .OrderByDescending(o => o.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(o => new OrderSummaryResponse
+                {
+                    Id = o.Id,
+                    CustomerName = o.CustomerName,
+                    CreatedAt = o.CreatedAt,
+                    Status = o.Status,
+                    TotalAmount = o.TotalAmount
+                })
+                .ToListAsync();
+        }
+
+        const string sql = """
+            SELECT
+                [Id],
+                [CustomerName],
+                [CreatedAt],
+                [Status],
+                [TotalAmount]
+            FROM [Orders]
+            ORDER BY [CreatedAt] DESC
+            OFFSET @Skip ROWS
+            FETCH NEXT @PageSize ROWS ONLY;
+            """;
+
+        var orders = await db.Database
+            .GetDbConnection()
+            .QueryAsync<OrderSummaryResponse>(
+                sql,
+                new
+                {
+                    Skip = (page - 1) * pageSize,
+                    PageSize = pageSize
+                });
+
+        return orders.ToList();
     }
 
     public async Task<OrderDetailsResponse> GetOrderByIdAsync(int id)
