@@ -253,7 +253,19 @@ A ideia é evitar que quem for testar precise instalar e configurar SQL Server m
 
 ---
 
-### Dapper e RabbitMQ
+### Dapper
+
+Usei Dapper apenas na listagem de pedidos.
+
+A ideia não foi substituir o Entity Framework no projeto inteiro. O EF Core continua sendo usado nas operações principais de persistência, como criação e cancelamento de pedidos, porque ele lida bem com entidades, relacionamentos e migrations.
+
+O Dapper foi usado no endpoint de listagem porque é uma consulta simples, paginada e somente de leitura. Nesse caso, escrever o SQL diretamente deixa a query mais explícita e previsível, sem precisar passar pelo pipeline completo do ORM. Muitas vezes o ORM é feito no formato "caixa-preta", onde você não sabe muito bem qual consulta SQL está sendo gerada. A vantagem do Dapper é explicitar exatamente como você quer que a query aconteça.
+
+Com isso, a solução mantém o Entity Framework onde ele faz mais sentido e usa Dapper apenas em um ponto específico onde o controle da consulta é mais interessante.
+
+---
+
+### RabbitMQ
 
 #TODO
 
