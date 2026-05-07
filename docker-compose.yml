@@ -19,6 +19,24 @@ services:
       retries: 10
       start_period: 20s
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: order-management-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: "order_user"
+      RABBITMQ_DEFAULT_PASS: "order_pass"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: order-management-sqlserver
@@ -43,3 +61,4 @@ services:
 
 volumes:
   sqlserver_data:
+  rabbitmq_data:
