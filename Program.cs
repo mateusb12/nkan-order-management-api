@@ -3,6 +3,7 @@ using OrderManagement.Features.Orders.Services;
 using Microsoft.EntityFrameworkCore;
 using OrderManagement.Shared.Data;
 using OrderManagement.Shared.Middleware;
+using OrderManagement.Shared.OpenApi;
 using Microsoft.Data.SqlClient;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,7 +22,10 @@ builder.Services.AddDbContext<Database>(options =>
 
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.DocumentFilter<DatabaseSchemaDocumentFilter>();
+});
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
