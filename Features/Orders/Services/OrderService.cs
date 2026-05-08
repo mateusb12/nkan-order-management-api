@@ -16,14 +16,19 @@ public class OrderService(
 {
     private const string OrderCreatedQueueName = "orders.created";
 
-    public async Task<OrderDetailsResponse> CreateOrderAsync(CreateOrderRequest request)
+    public async Task<OrderDetailsResponse> CreateOrderAsync(CreateOrderRequest? request)
     {
+        if (request is null)
+        {
+            throw new InvalidOperationException("Request body is required.");
+        }
+
         if (string.IsNullOrWhiteSpace(request.CustomerName))
         {
             throw new InvalidOperationException("Customer name is required.");
         }
 
-        if (request.Items.Count == 0)
+        if (request.Items is null || request.Items.Count == 0)
         {
             throw new InvalidOperationException("Order must contain at least one item.");
         }
@@ -164,13 +169,13 @@ public class OrderService(
             throw new NotFoundException($"Order {id} not found.");
         }
 
-        if (order.Status == OrderStatus.Cancelled)
+        if (order.Status == OrderStatus.Canceled)
         {
             throw new InvalidOperationException(
-                $"Order {id} is already cancelled.");
+                $"Order {id} is already canceled.");
         }
 
-        order.Status = OrderStatus.Cancelled;
+        order.Status = OrderStatus.Canceled;
 
         await db.SaveChangesAsync();
 

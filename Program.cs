@@ -6,7 +6,6 @@ using OrderManagement.Features.Orders.Services;
 using OrderManagement.Shared.Data;
 using OrderManagement.Shared.Middleware;
 using OrderManagement.Shared.OpenApi;
-using Microsoft.Data.SqlClient;
 
 var builder = WebApplication.CreateBuilder(args);
 

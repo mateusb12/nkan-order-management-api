@@ -128,6 +128,18 @@ public class OrderServiceTests
     }
 
     [Fact]
+    public async Task CriarPedidoAsync_DeveLancarErro_QuandoPayloadForNulo()
+    {
+        await using var db = CreateDatabase();
+        var service = new OrderService(db);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CreateOrderAsync(null));
+
+        Assert.Equal("Request body is required.", exception.Message);
+    }
+
+    [Fact]
     public async Task CriarPedidoAsync_DeveLancarErro_QuandoPedidoNaoTiverItens()
     {
         await using var db = CreateDatabase();
@@ -137,6 +149,24 @@ public class OrderServiceTests
         {
             CustomerName = "Maria Silva",
             Items = []
+        };
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CreateOrderAsync(request));
+
+        Assert.Equal("Order must contain at least one item.", exception.Message);
+    }
+
+    [Fact]
+    public async Task CriarPedidoAsync_DeveLancarErro_QuandoItensForemNulos()
+    {
+        await using var db = CreateDatabase();
+        var service = new OrderService(db);
+
+        var request = new CreateOrderRequest
+        {
+            CustomerName = "Maria Silva",
+            Items = null!
         };
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -268,11 +298,11 @@ public class OrderServiceTests
 
         var result = await service.CancelOrderAsync(order.Id);
 
-        Assert.Equal(OrderStatus.Cancelled, result.Status);
+        Assert.Equal(OrderStatus.Canceled, result.Status);
 
         var savedOrder = await db.Orders.FindAsync(order.Id);
         Assert.NotNull(savedOrder);
-        Assert.Equal(OrderStatus.Cancelled, savedOrder.Status);
+        Assert.Equal(OrderStatus.Canceled, savedOrder.Status);
     }
 
     [Fact]
@@ -281,12 +311,12 @@ public class OrderServiceTests
         await using var db = CreateDatabase();
         var service = new OrderService(db);
 
-        var order = await SeedOrderAsync(db, status: OrderStatus.Cancelled);
+        var order = await SeedOrderAsync(db, status: OrderStatus.Canceled);
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CancelOrderAsync(order.Id));
 
-        Assert.Equal($"Order {order.Id} is already cancelled.", exception.Message);
+        Assert.Equal($"Order {order.Id} is already canceled.", exception.Message);
     }
 
     [Fact]
